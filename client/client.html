@@ -6,7 +6,109 @@
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.min.js"></script>
   <script type="text/babel">
+  
+	//handles reponses (xhr onload)
+	//takes xhr object and whether we should parse the data (true/false)
+	const handleResponse = (xhr, shouldParse) => {
+		const pageBody = document.querySelector('#content');
+		
+		console.dir(xhr.status);
+		
+		//decide what to do based on status code
+		switch(xhr.status) {
+		  case 200: //success
+		    pageBody.innerHTML = '<b>Success</b>';
+			break;
+		  case 201: //created
+		    pageBody.innerHTML = '<b>Created</b>';
+			break;
+		  case 204: //updated
+		    pageBody.innerHTML = '<b>Updated</b>';
+			break;
+		  case 304: //file not modified
+		    pageBody.innerHTML = '<b>Not Modified</b>';
+			return;
+		  case 400: //bad request
+		    pageBody.innerHTML = '<b>Bad Request</b>';
+			break;
+		  case 404: //not found
+		    pageBody.innerHTML = '<b>Resource Not Found</b>';
+			break;
+		  default: //anything else
+		    pageBody.innerHTML = '<b>Error - Client cannot parse response</b>';
+			break;
+		}
+		
 
+		const obj = JSON.parse(xhr.response);
+
+		//if we have a message, just print it and leave
+		if(obj.message) {
+		pageBody.innerHTML += '<p>' + obj.message + '</p>';
+		return;
+		}
+
+		let bigString = "";
+
+		//loop through and get all users, append to HTML
+		Object.keys(obj).forEach(function(k){
+		bigString += '<p>Name: ' + k + ' Age: ' + obj[k].age + '</p>';
+		});
+
+		pageBody.innerHTML = bigString;
+	};
+		
+	//sends an AJAX request to the server
+	const sendAjax = (e, formData) => {
+		//get form target URL and method (get, post, head, etc.)
+		const formAction = formData.getAttribute('action');
+		const formMethod = formData.getAttribute('method');
+		
+		const xhr = new XMLHttpRequest();
+
+		
+		xhr.onload = () => { handleResponse(xhr, (formMethod == 'get')); };
+		
+		//decide what to do based on url
+		if(formAction === '/addUser') {
+		
+		    xhr.open(formMethod, formAction);
+			
+			//get additional data to send
+			const nameContent = formData.querySelector('#nameField');
+			const ageContent = formData.querySelector('#ageField');
+			
+			xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+			xhr.setRequestHeader('Accept', 'application/json');
+			
+			//format the data to send and send it
+			const dataStr = `name=${nameContent.value}&age=${ageContent.value}`;
+			xhr.send(dataStr);
+		} else {
+			xhr.open(document.querySelector('#methodSelect').value, document.querySelector('#urlField').value);
+			xhr.setRequestHeader('Accept', 'application/json');
+			xhr.send();
+		}
+		
+		e.preventDefault();
+		return false;
+	};
+	
+	
+	//init function called at page load
+	const init = () => {
+		
+		//set up globals/event handlers
+		const nameForm = document.querySelector('#nameForm');
+		const userForm = document.querySelector('#userForm');
+		const addUser = (e) => { sendAjax(e, nameForm); };
+		const getUsers = (e) => { sendAjax(e, userForm); };
+		
+		nameForm.addEventListener('submit', addUser);
+		userForm.addEventListener('submit', getUsers);
+	};
+	
+	window.onload = init;
   </script>
 </head>
 <body>
